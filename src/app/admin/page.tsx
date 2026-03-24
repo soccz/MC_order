@@ -74,6 +74,7 @@ function AdminDashboard() {
   const router = useRouter()
   const { config, mutate: mutateConfig } = useConfig()
   const { data: members, mutate: mutateMembers } = useSWR<Member[]>('/api/members', fetcher)
+  const { data: orders, mutate: mutateOrders } = useSWR<{ id: string; member_name: string; total_price: number; items: { menu_item_name: string; is_set: boolean; is_large: boolean; side_option_name?: string; drink_option_name?: string; quantity: number }[] }[]>('/api/orders', fetcher, { refreshInterval: 5000 })
 
   const [subsidy, setSubsidy] = useState('')
   const [newMember, setNewMember] = useState('')
@@ -123,6 +124,15 @@ function AdminDashboard() {
     mutateMembers()
   }
 
+  async function deleteOrder(orderId: string, memberName: string) {
+    if (!confirm(`${memberName}님의 주문을 삭제하시겠습니까?`)) return
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'DELETE',
+      headers: adminHeaders(),
+    })
+    mutateOrders()
+  }
+
   async function resetOrders() {
     if (!confirm('모든 주문을 삭제합니다. 계속하시겠습니까?')) return
     setResetting(true)
@@ -131,6 +141,7 @@ function AdminDashboard() {
       headers: adminHeaders(),
     })
     setResetting(false)
+    mutateOrders()
     alert('주문이 초기화되었습니다')
   }
 
@@ -210,6 +221,42 @@ function AdminDashboard() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* 주문 관리 */}
+        <section className="bg-white rounded-xl p-4 shadow-sm">
+          <h2 className="font-bold mb-3">주문 관리 ({orders?.length ?? 0}건)</h2>
+          {(orders ?? []).length === 0 ? (
+            <p className="text-sm text-mc-gray text-center py-3">주문이 없습니다</p>
+          ) : (
+            <div className="space-y-2">
+              {(orders ?? []).map(order => (
+                <div key={order.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">{order.member_name}</div>
+                    <div className="text-xs text-mc-gray truncate">
+                      {order.items?.map(i => {
+                        let label = i.menu_item_name ?? ''
+                        if (i.is_set) label += ' 세트'
+                        if (i.is_large) label += '(라지)'
+                        if (i.quantity > 1) label += ` x${i.quantity}`
+                        return label
+                      }).join(', ')}
+                    </div>
+                    <div className="text-xs font-medium text-mc-red mt-0.5">
+                      {order.total_price?.toLocaleString()}원
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => deleteOrder(order.id, order.member_name)}
+                    className="ml-2 px-3 py-1.5 text-xs bg-red-50 text-red-600 rounded-lg shrink-0"
+                  >
+                    삭제
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* 메뉴 관리 */}
