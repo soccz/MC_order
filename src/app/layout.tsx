@@ -4,6 +4,11 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'MC 단체주문',
   description: '맥도날드 단체 주문 & 정산',
+  openGraph: {
+    title: 'MC 단체주문',
+    description: '맥도날드 단체 주문 & 정산',
+    type: 'website',
+  },
 }
 
 export const viewport: Viewport = {
