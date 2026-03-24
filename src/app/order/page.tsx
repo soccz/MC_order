@@ -35,17 +35,46 @@ export default function OrderPage() {
     setMemberName(name)
     setMemberId(id)
 
-    // 기존 주문이 있으면 알림
+    // 기존 주문 존재 여부만 체크
     fetch(`/api/orders`)
       .then(r => r.json())
       .then(orders => {
         const myOrder = orders.find?.((o: { member_id: string }) => o.member_id === id)
         if (myOrder && myOrder.items?.length > 0) {
           setHasExistingOrder(true)
+          sessionStorage.setItem('existing_order', JSON.stringify(myOrder))
         }
       })
       .catch(() => {})
   }, [router])
+
+  // 메뉴 로드 후 기존 주문 장바구니 복원
+  useEffect(() => {
+    if (menuItems.length === 0 || cart.items.length > 0 || !hasExistingOrder) return
+    const raw = sessionStorage.getItem('existing_order')
+    if (!raw) return
+    try {
+      const myOrder = JSON.parse(raw)
+      const restored = myOrder.items.map((item: {
+        menu_item_id: string; is_set: boolean; is_large: boolean;
+        side_option_id: string | null; drink_option_id: string | null;
+        quantity: number; item_price: number;
+      }) => ({
+        temp_id: crypto.randomUUID(),
+        menu_item: menuItems.find(m => m.id === item.menu_item_id) || null,
+        is_set: item.is_set,
+        is_large: item.is_large,
+        side_option: item.side_option_id ? sideOptions.find(s => s.id === item.side_option_id) || null : null,
+        drink_option: item.drink_option_id ? drinkOptions.find(d => d.id === item.drink_option_id) || null : null,
+        quantity: item.quantity,
+        calculated_price: item.item_price,
+      })).filter((i: { menu_item: MenuItem | null }) => i.menu_item !== null)
+      if (restored.length > 0) {
+        cart.loadFromOrder(restored)
+      }
+      sessionStorage.removeItem('existing_order')
+    } catch { /* ignore */ }
+  }, [menuItems, sideOptions, drinkOptions, hasExistingOrder, cart])
 
   // 활성 카테고리
   const filteredCategories = useMemo(() => {
@@ -123,21 +152,12 @@ export default function OrderPage() {
       }
 
       cart.clearCart()
+      alert('주문이 완료되었습니다!\n수정하려면 같은 이름으로 다시 들어오세요.')
       router.push('/status')
     } catch {
       alert('서버 오류가 발생했습니다')
       setSubmitting(false)
     }
-  }
-
-  function getDisplayPrice(item: MenuItem): string {
-    if (timeSlot === 'lunch' && item.lunch_set_price) {
-      return formatPrice(item.lunch_set_price)
-    }
-    if (item.is_set_available && item.set_price) {
-      return formatPrice(item.set_price)
-    }
-    return formatPrice(item.price)
   }
 
   if (isLoading) {
@@ -162,9 +182,9 @@ export default function OrderPage() {
       </div>
 
       {/* 기존 주문 알림 */}
-      {hasExistingOrder && cart.items.length === 0 && (
+      {hasExistingOrder && (
         <div className="bg-mc-yellow/30 px-4 py-2 text-sm text-mc-brown text-center">
-          이전 주문이 있습니다. 새로 주문하면 기존 주문이 대체됩니다.
+          기존 주문을 불러왔습니다. 수정 후 다시 제출하세요.
         </div>
       )}
 
