@@ -53,6 +53,13 @@ export async function POST(request: NextRequest) {
   const { member_id, items } = body
 
   if (isMockMode()) {
+    // mock 마감 체크는 config API의 mockConfig 참조 불가 → 별도 import 필요 없이 config API 호출
+    const configRes = await fetch(new URL('/api/config', request.url))
+    const configData = await configRes.json()
+    if (!configData.order_open) {
+      return Response.json({ error: '주문이 마감되었습니다' }, { status: 403 })
+    }
+
     const member = MOCK_MEMBERS.find(m => m.id === member_id && m.is_active)
     if (!member) return Response.json({ error: '등록되지 않은 멤버입니다' }, { status: 400 })
 

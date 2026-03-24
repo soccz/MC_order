@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useMenu } from '@/hooks/use-menu'
 import { useConfig } from '@/hooks/use-config'
 import { useCart } from '@/hooks/use-cart'
-import { getCurrentTimeSlot, getTimeSlotLabel, formatPrice, calculateCartTotal } from '@/lib/price'
+import { getCurrentTimeSlot, getTimeSlotLabel, formatPrice, calculateCartTotal, calculateItemPrice } from '@/lib/price'
 import type { MenuItem, SideOption, DrinkOption, TimeSlot } from '@/lib/types'
 import SetOptionSheet from '@/components/set-option-sheet'
 
@@ -288,7 +288,9 @@ export default function OrderPage() {
                       +
                     </button>
                   </div>
-                  <span className="font-bold">{formatPrice(item.calculated_price * item.quantity)}</span>
+                  <span className="font-bold">{formatPrice(
+                    calculateItemPrice(item.menu_item, item.is_set, item.is_large, item.side_option, item.drink_option, timeSlot) * item.quantity
+                  )}</span>
                 </div>
               </div>
             ))}

@@ -1,11 +1,16 @@
 import { NextRequest } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { verifyAdmin, unauthorizedResponse } from '@/lib/admin-auth'
+import { isMockMode, mockOrders } from '@/lib/mock-data'
 
 export async function POST(request: NextRequest) {
   if (!verifyAdmin(request)) return unauthorizedResponse()
 
-  // order_items는 orders에 ON DELETE CASCADE이므로 orders만 삭제하면 됨
+  if (isMockMode()) {
+    mockOrders.clear()
+    return Response.json({ success: true })
+  }
+
   const { error } = await supabase
     .from('orders')
     .delete()
